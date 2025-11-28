@@ -1,7 +1,6 @@
 FROM python:3.10-slim
 
-# --- System deps required by Playwright browsers AND Tesseract ---
-# Added 'tesseract-ocr' to the install list
+# --- System deps required by Playwright, Tesseract, Audio (ffmpeg) ---
 RUN apt-get update && apt-get install -y \
     wget gnupg ca-certificates curl unzip \
     # Playwright dependencies
@@ -10,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libxfixes3 libpango-1.0-0 libcairo2 \
     # Tesseract OCR engine
     tesseract-ocr \
+    # Audio processing (required by pydub)
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Install Playwright + Chromium ---
@@ -18,20 +19,18 @@ RUN pip install playwright && playwright install --with-deps chromium
 # --- Install uv package manager ---
 RUN pip install uv
 
-# --- Copy app to container ---
+# --- App directory ---
 WORKDIR /app
-
 COPY . .
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONIOENCODING=utf-8
 
-# --- Install project dependencies using uv ---
+# --- Install project dependencies ---
 RUN uv sync --frozen
 
 # HuggingFace Spaces exposes port 7860
 EXPOSE 7860
 
 # --- Run your FastAPI app ---
-# uvicorn must be in pyproject dependencies
 CMD ["uv", "run", "main.py"]
